@@ -1,5 +1,5 @@
 package calculator
 
 fun main() {
-    println("Hello, World!")
+    readln().split(" ").map(String::toInt).sum().let(::println)
 }
