@@ -1,5 +1,13 @@
 package calculator
 
 fun main() {
-    readln().split(" ").map(String::toInt).sum().let(::println)
+    while (true) {
+        val input = readln()
+        when {
+            input == "/exit" -> break
+            input.isEmpty() -> continue
+            else -> println(input.split(" ").map(String::toInt).sum())
+        }
+    }
+    println("Bye!")
 }
