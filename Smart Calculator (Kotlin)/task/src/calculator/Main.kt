@@ -5,6 +5,7 @@ fun main() {
         val input = readln()
         when {
             input == "/exit" -> break
+            input == "/help" -> println("The program calculates the sum of numbers")
             input.isEmpty() -> continue
             else -> println(input.split(" ").map(String::toInt).sum())
         }
