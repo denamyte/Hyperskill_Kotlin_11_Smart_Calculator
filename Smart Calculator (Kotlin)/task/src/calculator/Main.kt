@@ -5,9 +5,17 @@ fun main() {
         val input = readln()
         when {
             input == "/exit" -> break
-            input == "/help" -> println("The program calculates the sum of numbers")
+            input == "/help" -> println("The program evaluates some math expressions")
             input.isEmpty() -> continue
-            else -> println(input.split(" ").map(String::toInt).sum())
+            else -> {
+                val parser = Parser(input)
+                parser.parse()
+                val tokens = parser.tokens
+//                println(tokens)
+                val solution = Solution(tokens)
+                println(solution.solve())
+//                println(solution.postfix)
+            }
         }
     }
     println("Bye!")
