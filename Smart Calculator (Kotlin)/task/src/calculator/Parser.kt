@@ -41,7 +41,8 @@ class Parser(s: String) {
     private fun tokenTypeByChar(c: Char) = when {
         c.isDigit() -> TokenType.Num
         c.isOp() -> TokenType.Operator
-        else/*c.isWhitespace()*/ -> TokenType.Unknown
+        c.isWhitespace() -> TokenType.Unknown
+        else -> throw IllegalArgumentException("Invalid token!")
     }
 
     private fun tokenInProgress(c: Char) {
@@ -53,8 +54,17 @@ class Parser(s: String) {
                 tokenType = TokenType.Num
             } else {
                 finishToken()
+                validateTokenOrder()
                 startToken(c)
             }
+        }
+    }
+
+    private fun validateTokenOrder() {
+        if (_tokens.size > 1) {
+            if (_tokens.last() is CalcToken.Number &&
+                _tokens[tokens.lastIndex - 1] is CalcToken.Number)
+                throw IllegalArgumentException("Wrong order of tokens!")
         }
     }
 }

@@ -213,6 +213,203 @@ files:
           }
       }
     learner_created: false
+  - name: src/calculator/Parser.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      private fun Char.isPlus() = this == '+'
+      private fun Char.isMinus() = this == '-'
+      private fun Char.isOp() = isPlus() || isMinus()
+      
+      class Parser(s: String) {
+      
+          /** The string to parse */
+          private val s = "$s "  // Add a space for the parser to properly finish its work
+          /** The position where a token starts */
+          private var startPos = -1
+          /** The current index in the string */
+          private var currPos = -1
+          private var tokenType: TokenType = TokenType.Unknown
+      
+          private var _tokens = mutableListOf<CalcToken>()
+          val tokens get() = _tokens.toList()
+      
+          fun parse() {
+              while (++currPos < s.length) {
+                  val c = s[currPos]
+                  when (tokenType) {
+                      TokenType.Unknown -> startToken(c)
+                      else -> tokenInProgress(c)
+                  }
+              }
+          }
+      
+          private fun startToken(c: Char) {
+              startPos = currPos
+              tokenType = tokenTypeByChar(c)
+          }
+      
+          private fun finishToken() {
+              val tStr = s.substring(startPos, currPos)
+              _tokens += CalcToken.tokenFactory(tokenType, tStr)
+              tokenType = TokenType.Unknown
+          }
+      
+          private fun tokenTypeByChar(c: Char) = when {
+              c.isDigit() -> TokenType.Num
+              c.isOp() -> TokenType.Operator
+              else/*c.isWhitespace()*/ -> TokenType.Unknown
+          }
+      
+          private fun tokenInProgress(c: Char) {
+              val charToken = tokenTypeByChar(c)
+              if (tokenType != charToken) {
+                  // Check for unary minus or any other unary operator
+                  if (tokenType == TokenType.Operator && charToken == TokenType.Num
+                      && (_tokens.isEmpty() || _tokens.last() is CalcToken.Operator)) {
+                      tokenType = TokenType.Num
+                  } else {
+                      finishToken()
+                      startToken(c)
+                  }
+              }
+          }
+      }
+    learner_created: true
+  - name: src/calculator/Solution.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      import java.util.LinkedList
+      
+      private val opMap = mapOf(
+          "+" to {a: CalcToken.Number, b: CalcToken.Number -> CalcToken.Number(a.value + b.value)},
+          "-" to {a: CalcToken.Number, b: CalcToken.Number -> CalcToken.Number(a.value - b.value)}
+      )
+      
+      class Solution(val tokens: List<CalcToken>) {
+          private val stack = LinkedList<CalcToken>()
+          val postfix = mutableListOf<CalcToken>()
+      
+          private fun buildPostfix(): List<CalcToken> {
+              tokens.forEach {
+                  when (it) {
+                      is CalcToken.Number -> postfix += it
+                      is CalcToken.Operator -> {
+                          while (/*stack.isNotEmpty() &&*/
+                              operatorOfGreaterOrEqualPriorityIsOnTheStack(it.priority())) {
+                              postfix += stack.pop()
+                          }
+                          stack.push(it)
+                      }
+                      // todo: cases when a token is a left or right parenthesis
+                  }
+              }
+              while (stack.isNotEmpty()) postfix += stack.pop()
+              return postfix.toList()
+          }
+      
+          private fun operatorOfGreaterOrEqualPriorityIsOnTheStack(priority: Int): Boolean {
+              val maxStackPriority = stack.filterIsInstance<CalcToken.Operator>().maxOfOrNull { it.priority() }
+              return maxStackPriority != null && maxStackPriority >= priority
+          }
+      
+          fun solve(): Int {
+              buildPostfix()
+              postfix.forEach {
+                  when (it) {
+                      is CalcToken.Number -> stack.push(it)
+                      is CalcToken.Operator -> {
+                          val second = stack.pop()!! as CalcToken.Number
+                          val first = stack.pop()!! as CalcToken.Number
+                          stack.push(opMap[it.value]!!(first, second))
+                      }
+                  }
+              }
+              return (stack.pop() as CalcToken.Number).value
+          }
+      }
+    learner_created: true
+  - name: src/calculator/CalcToken.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      abstract class CalcToken(val tStr: String) {
+      
+          class Number(s: String): CalcToken(s) {
+              constructor(i: Int): this(i.toString())
+              val value = tStr.toInt()
+          }
+          abstract class Operator(s: String): CalcToken(s) {
+              abstract val value: String
+              fun priority() = priorityMap[value]!!
+              final override fun toString() = value
+          }
+          class Plus(s: String): Operator(s) {
+              override val value = "+"
+          }
+          class Minus(s: String): Operator(s) {
+              override val value = "-"
+          }
+      
+          class Empty(s: String): CalcToken(s)
+      
+          override fun toString() = tStr
+      
+          companion object {
+              /** Create a token based on the character type. */
+              private fun plusToken(s: String) = Plus(s)
+              private fun minusToken(s: String) = Minus(s)
+      
+              private val opMap = mapOf<Char, (String) -> CalcToken>(
+                  '+' to ::plusToken,
+                  '-' to ::minusToken
+              )
+      
+              private val priorityMap = mapOf(
+                  "(" to 1,
+                  ")" to 1,
+                  "-" to 2,
+                  "+" to 2,
+                  "/" to 3,
+                  "*" to 3,
+                  "^" to 4
+              )
+      
+              fun tokenFactory(type: TokenType, tStr: String) = when (type) {
+                  TokenType.Num -> Number(tStr)
+                  TokenType.Operator -> {
+                      checkOperatorUniformity(tStr)
+                      if (tStr.first() == '-' && tStr.length % 2 == 0) Plus(tStr)
+                      else opMap[tStr.first()]!!(tStr)
+                  }
+                  TokenType.Unknown -> Empty(tStr)
+              }
+      
+              private fun checkOperatorUniformity(tStr: String) {
+                  if (tStr.count { it == tStr.first() } != tStr.length)
+                      throw IllegalArgumentException("Illegal argument for operator: $tStr")
+              }
+          }
+      }
+    learner_created: true
+  - name: src/calculator/TokenType.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      enum class TokenType {
+          Unknown,
+          Num,
+          Operator;
+      }
+    learner_created: true
 feedback_link: https://hyperskill.org/projects/88/stages/490/implement#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: "Mon, 23 Oct 2023 14:09:56 UTC"
 record: -1
