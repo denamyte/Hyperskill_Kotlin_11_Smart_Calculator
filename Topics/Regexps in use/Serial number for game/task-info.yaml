@@ -1,0 +1,17 @@
+type: code
+files:
+  - name: src/Main.kt
+    visible: true
+    highlight_level: NONE
+    text: |-
+      fun findSerialNumberForGame(listGames: List<String>) {
+      
+      }
+    learner_created: false
+feedback_link: https://hyperskill.org/learn/step/24614#comment
+status: Solved
+feedback:
+  message: <html>Correct solution</html>
+  time: "Mon, 23 Oct 2023 13:30:50 UTC"
+record: -1
+submission_language: kotlin
