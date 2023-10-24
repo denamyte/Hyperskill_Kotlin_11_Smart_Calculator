@@ -1,0 +1,1 @@
+fun main() = println(readln().split(readln()).size - 1)
