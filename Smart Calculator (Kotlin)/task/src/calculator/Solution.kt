@@ -1,41 +1,56 @@
 package calculator
 
 import java.util.LinkedList
+import kotlin.math.pow
 
-private val opMap = mapOf(
-    "+" to {a: CalcToken.Number, b: CalcToken.Number -> CalcToken.Number(a.value + b.value)},
-    "-" to {a: CalcToken.Number, b: CalcToken.Number -> CalcToken.Number(a.value - b.value)}
+private val opMap = mapOf<String, (CalcToken.Number, CalcToken.Number) -> CalcToken.Number>(
+    "+" to {a, b -> CalcToken.Number(a.value + b.value)},
+    "-" to {a, b -> CalcToken.Number(a.value - b.value)},
+    "*" to {a, b -> CalcToken.Number(a.value * b.value)},
+    "/" to {a, b -> CalcToken.Number(a.value / b.value)},
+    "^" to {a, b -> CalcToken.Number(a.value.toDouble().pow(b.value).toInt())},
 )
 
-class Solution(val tokens: List<CalcToken>) {
-    private val stack = LinkedList<CalcToken>()
-    val postfix = mutableListOf<CalcToken>()
+class Solution(private val tokens: List<CalcToken>) {
+    private val postfix = mutableListOf<CalcToken>()
 
     private fun buildPostfix(): List<CalcToken> {
+        val stack = LinkedList<CalcToken.Operator>()
         tokens.forEach {
             when (it) {
                 is CalcToken.Number -> postfix += it
-                is CalcToken.Operator -> {
-                    while (/*stack.isNotEmpty() &&*/
-                        operatorOfGreaterOrEqualPriorityIsOnTheStack(it.priority())) {
+                is CalcToken.OpenParenth -> stack.push(it)
+                is CalcToken.CloseParenth /* ")" */ -> {
+                    while (stack.peek() !is CalcToken.OpenParenth)
                         postfix += stack.pop()
-                    }
-                    stack.push(it)
+                    stack.pop()  // "("
                 }
-                // todo: cases when a token is a left or right parenthesis
+                is CalcToken.Operator -> {
+                    if (stack.isEmpty()) {
+                        stack.push(it)
+                    } else {
+                        val stackTop = stack.peek()
+                        if (stackTop is CalcToken.OpenParenth)
+                            stack.push(it)
+                        else if (it.priority > stackTop.priority)
+                            stack.push(it)
+                        else /* curOp.priority <= stackTop.priority */ {
+                            while (stack.isNotEmpty() &&
+                                (stack.peek() !is CalcToken.OpenParenth && it.priority <= stack.peek().priority))
+                                postfix += stack.pop()
+                            stack.push(it)
+                        }
+                    }
+                }
             }
         }
         while (stack.isNotEmpty()) postfix += stack.pop()
         return postfix.toList()
     }
 
-    private fun operatorOfGreaterOrEqualPriorityIsOnTheStack(priority: Int): Boolean {
-        val maxStackPriority = stack.filterIsInstance<CalcToken.Operator>().maxOfOrNull { it.priority() }
-        return maxStackPriority != null && maxStackPriority >= priority
-    }
-
     fun solve(): Int {
         buildPostfix()
+        val stack = LinkedList<CalcToken>()
         postfix.forEach {
             when (it) {
                 is CalcToken.Number -> stack.push(it)

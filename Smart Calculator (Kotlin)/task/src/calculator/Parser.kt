@@ -1,8 +1,8 @@
 package calculator
 
-private fun Char.isPlus() = this == '+'
+private fun Char.isOp() = this in "+-*/^()"
 private fun Char.isMinus() = this == '-'
-private fun Char.isOp() = isPlus() || isMinus()
+private fun Char.isParenthesis() = this in "()"
 
 class Parser(s: String) {
 
@@ -17,6 +17,8 @@ class Parser(s: String) {
     private var _tokens = mutableListOf<CalcToken>()
     val tokens get() = _tokens.toList()
 
+    private var parenthCount = 0
+
     fun parse() {
         while (++currPos < s.length) {
             val c = s[currPos]
@@ -25,6 +27,7 @@ class Parser(s: String) {
                 else -> tokenInProgress(c)
             }
         }
+        if (parenthCount != 0) throw IllegalArgumentException("Parentheses are not paired")
     }
 
     private fun startToken(c: Char) {
@@ -34,7 +37,9 @@ class Parser(s: String) {
 
     private fun finishToken() {
         val tStr = s.substring(startPos, currPos)
-        _tokens += CalcToken.tokenFactory(tokenType, tStr)
+        val token = CalcToken.tokenFactory(tokenType, tStr)
+        _tokens += token
+        if (token is CalcToken.Parenth) parenthCount += token.count
         tokenType = TokenType.Unknown
     }
 
@@ -47,9 +52,9 @@ class Parser(s: String) {
 
     private fun tokenInProgress(c: Char) {
         val charToken = tokenTypeByChar(c)
-        if (tokenType != charToken) {
+        if (tokenType != charToken || c.isParenthesis() || s[currPos - 1].isParenthesis()) {
             // Check for unary minus or any other unary operator
-            if (tokenType == TokenType.Operator && charToken == TokenType.Num
+            if (s[currPos - 1].isMinus() && charToken == TokenType.Num
                 && (_tokens.isEmpty() || _tokens.last() is CalcToken.Operator)) {
                 tokenType = TokenType.Num
             } else {

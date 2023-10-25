@@ -42,8 +42,8 @@ class Validator {
                     return
                 }
                 !parts.isAssignment -> {
-                    val firstToken = parts.firstStr.split(" ")[0]
-                    if (firstToken[0].isLetter() && !VAR_REGEX.matches(firstToken)) {
+                    val firstToken = parts.firstStr.split(Regex("\\W"))[0]
+                    if (firstToken.isNotEmpty() && firstToken[0].isLetter() && !VAR_REGEX.matches(firstToken)) {
                         parts.errorString = "Invalid identifier"
                         return
                     }

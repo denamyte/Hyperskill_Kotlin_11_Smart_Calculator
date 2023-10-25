@@ -259,6 +259,348 @@ files:
           }
       }
     learner_created: false
+  - name: src/calculator/Parser.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      private fun Char.isOp() = this in "+-*/^()"
+      private fun Char.isMinus() = this == '-'
+      private fun Char.isParenthesis() = this in "()"
+      
+      class Parser(s: String) {
+      
+          /** The string to parse */
+          private val s = "$s "  // Add a space for the parser to properly finish its work
+          /** The position where a token starts */
+          private var startPos = -1
+          /** The current index in the string */
+          private var currPos = -1
+          private var tokenType: TokenType = TokenType.Unknown
+      
+          private var _tokens = mutableListOf<CalcToken>()
+          val tokens get() = _tokens.toList()
+      
+          private var parenthCount = 0
+      
+          fun parse() {
+              while (++currPos < s.length) {
+                  val c = s[currPos]
+                  when (tokenType) {
+                      TokenType.Unknown -> startToken(c)
+                      else -> tokenInProgress(c)
+                  }
+              }
+              if (parenthCount != 0) throw IllegalArgumentException("Parentheses are not paired")
+          }
+      
+          private fun startToken(c: Char) {
+              startPos = currPos
+              tokenType = tokenTypeByChar(c)
+          }
+      
+          private fun finishToken() {
+              val tStr = s.substring(startPos, currPos)
+              val token = CalcToken.tokenFactory(tokenType, tStr)
+              _tokens += token
+              if (token is CalcToken.Parenth) parenthCount += token.count
+              tokenType = TokenType.Unknown
+          }
+      
+          private fun tokenTypeByChar(c: Char) = when {
+              c.isDigit() -> TokenType.Num
+              c.isOp() -> TokenType.Operator
+              c.isWhitespace() -> TokenType.Unknown
+              else -> throw IllegalArgumentException("Invalid token!")
+          }
+      
+          private fun tokenInProgress(c: Char) {
+              val charToken = tokenTypeByChar(c)
+              if (tokenType != charToken || c.isParenthesis() || s[currPos - 1].isParenthesis()) {
+                  // Check for unary minus or any other unary operator
+                  if (/*tokenType == TokenType.Operator && */s[currPos - 1].isMinus() && charToken == TokenType.Num
+                      && (_tokens.isEmpty() || _tokens.last() is CalcToken.Operator)) {
+                      tokenType = TokenType.Num
+                  } else {
+                      finishToken()
+                      validateTokenOrder()
+                      startToken(c)
+                  }
+              }
+          }
+      
+          private fun validateTokenOrder() {
+              if (_tokens.size > 1) {
+                  if (_tokens.last() is CalcToken.Number &&
+                      _tokens[tokens.lastIndex - 1] is CalcToken.Number)
+                      throw IllegalArgumentException("Wrong order of tokens!")
+              }
+          }
+      }
+    learner_created: true
+  - name: src/calculator/Variables.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      class Variables {
+          private val valueMap = mutableMapOf<String, String>()
+      
+          fun replaceVariablesWithValues(expr: String): String {
+              var s = expr
+              valueMap.forEach { (k, v) -> s = s.replace(Regex("""\b$k\b"""), v) }
+              return s
+          }
+      
+          fun setVariable(variable: String, value: String) {
+              valueMap[variable] = value
+          }
+      }
+    learner_created: true
+  - name: src/calculator/Solution.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      import java.util.LinkedList
+      import kotlin.math.pow
+      
+      private val opMap = mapOf<String, (CalcToken.Number, CalcToken.Number) -> CalcToken.Number>(
+          "+" to {a, b -> CalcToken.Number(a.value + b.value)},
+          "-" to {a, b -> CalcToken.Number(a.value - b.value)},
+          "*" to {a, b -> CalcToken.Number(a.value * b.value)},
+          "/" to {a, b -> CalcToken.Number(a.value / b.value)},
+          "^" to {a, b -> CalcToken.Number(a.value.toDouble().pow(b.value).toInt())},
+      )
+      
+      class Solution(private val tokens: List<CalcToken>) {
+          private val postfix = mutableListOf<CalcToken>()
+      
+          private fun buildPostfix(): List<CalcToken> {
+              val stack = LinkedList<CalcToken.Operator>()
+              tokens.forEach {
+                  when (it) {
+                      is CalcToken.Number -> postfix += it
+                      is CalcToken.OpenParenth -> stack.push(it)
+                      is CalcToken.CloseParenth /* ")" */ -> {
+                          while (stack.peek() !is CalcToken.OpenParenth)
+                              postfix += stack.pop()
+                          stack.pop()  // "("
+                      }
+                      is CalcToken.Operator -> {
+                          if (stack.isEmpty()) {
+                              stack.push(it)
+                          } else {
+                              val stackTop = stack.peek()
+                              if (stackTop is CalcToken.OpenParenth)
+                                  stack.push(it)
+                              else if (it.priority > stackTop.priority)
+                                  stack.push(it)
+                              else /* curOp.priority <= stackTop.priority */ {
+                                  while (stack.isNotEmpty() &&
+                                      (stack.peek() !is CalcToken.OpenParenth && it.priority <= stack.peek().priority))
+                                      postfix += stack.pop()
+                                  stack.push(it)
+                              }
+                          }
+                      }
+                  }
+              }
+              while (stack.isNotEmpty()) postfix += stack.pop()
+              return postfix.toList()
+          }
+      
+          fun solve(): Int {
+              buildPostfix()
+              val stack = LinkedList<CalcToken>()
+              postfix.forEach {
+                  when (it) {
+                      is CalcToken.Number -> stack.push(it)
+                      is CalcToken.Operator -> {
+                          val second = stack.pop()!! as CalcToken.Number
+                          val first = stack.pop()!! as CalcToken.Number
+                          stack.push(opMap[it.value]!!(first, second))
+                      }
+                  }
+              }
+              return (stack.pop() as CalcToken.Number).value
+          }
+      }
+    learner_created: true
+  - name: src/calculator/CalcToken.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      abstract class CalcToken(val tStr: String) {
+      
+          class Number(s: String): CalcToken(s) {
+              constructor(i: Int): this(i.toString())
+              val value = tStr.toInt()
+          }
+          abstract class Operator(s: String): CalcToken(s) {
+              val value = with(s) {
+                  if (startsWith('-') && length % 2 == 0) "+" else substring(0, 1)
+              }
+              val priority = priorityMap[value]!!
+              final override fun toString() = value
+          }
+          class Plus(s: String): Operator(s)
+          class Minus(s: String): Operator(s)
+          abstract class HigherOp(s: String) : Operator(s) {
+              init {
+                  if (s.length > 1)
+                      throw IllegalArgumentException("Multiple chars are not allowed in this operator")
+              }
+          }
+          class Multiply(s: String) : HigherOp(s)
+          class Divide(s: String) : HigherOp(s)
+          class Power(s: String) : HigherOp(s)
+          abstract class Parenth(s: String): Operator(s) {
+              abstract val count: Int
+          }
+          class OpenParenth: Parenth("(") {
+              override val count = 1
+          }
+          class CloseParenth: Parenth(")") {
+              override val count = -1
+          }
+      
+          class Empty(s: String): CalcToken(s)
+      
+          override fun toString() = tStr
+      
+          companion object {
+              /** Create a token based on the character type. */
+              private fun plusToken(s: String) = Plus(s)
+              private fun minusToken(s: String) = Minus(s)
+              private fun multiplyToken(s: String) = Multiply(s)
+              private fun divideToken(s: String) = Divide(s)
+              private fun powerToken(s: String) = Power(s)
+              private fun openToken(s: String) = OpenParenth()
+              private fun closeToken(s: String) = CloseParenth()
+      
+              private val opMap = mapOf<Char, (String) -> CalcToken>(
+                  '+' to ::plusToken,
+                  '-' to ::minusToken,
+                  '*' to ::multiplyToken,
+                  '/' to ::divideToken,
+                  '^' to ::powerToken,
+                  '(' to ::openToken,
+                  ')' to ::closeToken,
+              )
+      
+              private val priorityMap = mapOf(
+                  "^" to 4,
+                  "/" to 3,
+                  "*" to 3,
+                  "-" to 2,
+                  "+" to 2,
+                  "(" to 1,
+                  ")" to 1,
+              )
+      
+              fun tokenFactory(type: TokenType, tStr: String) = when (type) {
+                  TokenType.Num -> Number(tStr)
+                  TokenType.Operator -> {
+                      checkOperatorUniformity(tStr)
+                      if (tStr.first() == '-' && tStr.length % 2 == 0) Plus(tStr)
+                      else opMap[tStr.first()]!!(tStr)
+                  }
+                  TokenType.Unknown -> Empty(tStr)
+              }
+      
+              private fun checkOperatorUniformity(tStr: String) {
+                  if (tStr.count { it == tStr.first() } != tStr.length)
+                      throw IllegalArgumentException("Illegal argument for operator: $tStr")
+              }
+          }
+      }
+    learner_created: true
+  - name: src/calculator/Validator.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      class Validator {
+      
+          class Parts {
+              var errorString: String? = null
+              val isError get() = errorString != null
+              var firstStr: String = ""
+              var secondStr: String? = null
+              val isAssignment get() = secondStr != null
+      
+              var expression: String
+                  get() = if (isAssignment) secondStr!! else firstStr
+                  set(value) {
+                      if (isAssignment) secondStr = value
+                      else firstStr = value
+                  }
+          }
+          companion object {
+              private val VAR_REGEX = Regex("""\b[a-zA-Z]+\b""")
+              private val INVALID_VAR_REGEX = Regex(""" *([a-zA-Z]\d|\d[a-zA-Z]).*""")
+      
+              /** Validate an expression and return an error string if it is not valid. */
+              fun validate(input: String, vars: Variables): Parts {
+                  val parts = Parts()
+                  val split = input.split("=")
+                  when (split.size) {
+                      1 -> parts.firstStr = input.trim()
+                      else -> {
+                          parts.firstStr = split[0].trim()
+                          parts.secondStr = input.substring(split[0].length + 1).trim()
+                      }
+                  }
+                  validate(vars, parts)
+                  return parts
+              }
+      
+              private fun validate(vars: Variables, parts: Parts) {
+                  when {  // Check invalid identifiers
+                      parts.isAssignment && !VAR_REGEX.matches(parts.firstStr) -> {
+                          parts.errorString = "Invalid identifier"
+                          return
+                      }
+                      !parts.isAssignment -> {
+                          val firstToken = parts.firstStr.split(Regex("\\W"))[0]
+                          if (firstToken.isNotEmpty() && firstToken[0].isLetter() && !VAR_REGEX.matches(firstToken)) {
+                              parts.errorString = "Invalid identifier"
+                              return
+                          }
+                      }
+                  }
+                  parts.expression = vars.replaceVariablesWithValues(parts.expression)
+                  when {
+                      INVALID_VAR_REGEX.find(parts.expression) != null ||
+                              parts.expression.contains("=") -> {
+                          parts.errorString = "Invalid assignment"
+                          return
+                      }
+                      VAR_REGEX.find(parts.expression) != null -> {
+                          parts.errorString = "Unknown variable"
+                          return
+                      }
+                  }
+              }
+          }
+      }
+    learner_created: true
+  - name: src/calculator/TokenType.kt
+    visible: true
+    text: |-
+      package calculator
+      
+      enum class TokenType {
+          Unknown,
+          Num,
+          Operator;
+      }
+    learner_created: true
 feedback_link: https://hyperskill.org/projects/88/stages/492/implement#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: "Wed, 25 Oct 2023 18:52:23 UTC"
 record: -1
