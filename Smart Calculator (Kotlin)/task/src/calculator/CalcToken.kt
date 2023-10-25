@@ -1,10 +1,12 @@
 package calculator
 
+import java.math.BigInteger
+
 abstract class CalcToken(val tStr: String) {
 
     class Number(s: String): CalcToken(s) {
-        constructor(i: Int): this(i.toString())
-        val value = tStr.toInt()
+        constructor(i: BigInteger): this(i.toString())
+        val value = tStr.toBigInteger()
     }
     abstract class Operator(s: String): CalcToken(s) {
         val value = with(s) {

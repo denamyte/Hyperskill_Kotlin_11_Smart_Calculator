@@ -8,7 +8,7 @@ private val opMap = mapOf<String, (CalcToken.Number, CalcToken.Number) -> CalcTo
     "-" to {a, b -> CalcToken.Number(a.value - b.value)},
     "*" to {a, b -> CalcToken.Number(a.value * b.value)},
     "/" to {a, b -> CalcToken.Number(a.value / b.value)},
-    "^" to {a, b -> CalcToken.Number(a.value.toDouble().pow(b.value).toInt())},
+    "^" to {a, b -> CalcToken.Number(a.value.pow(b.value.toInt()))},
 )
 
 class Solution(private val tokens: List<CalcToken>) {
@@ -48,7 +48,7 @@ class Solution(private val tokens: List<CalcToken>) {
         return postfix.toList()
     }
 
-    fun solve(): Int {
+    fun solve(): String {
         buildPostfix()
         val stack = LinkedList<CalcToken>()
         postfix.forEach {
@@ -61,6 +61,6 @@ class Solution(private val tokens: List<CalcToken>) {
                 }
             }
         }
-        return (stack.pop() as CalcToken.Number).value
+        return (stack.pop() as CalcToken.Number).toString()
     }
 }

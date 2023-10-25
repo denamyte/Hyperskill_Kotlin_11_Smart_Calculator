@@ -22,7 +22,7 @@ fun main() {
 
                     val solution = Solution(parser.tokens)
                     if (parts.isAssignment) {
-                        vars.setVariable(parts.firstStr, solution.solve().toString())
+                        vars.setVariable(parts.firstStr, solution.solve())
                     } else println(solution.solve())
 
                 } catch (e: Exception) {
