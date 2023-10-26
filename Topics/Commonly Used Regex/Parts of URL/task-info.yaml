@@ -1,0 +1,27 @@
+type: matching
+captions:
+  - (https?:\/\/)? 
+  - "([\\da-z\\.-]+)\\.([a-z\\.]{2,6})"
+  - "([\\/\\w\\.-]*)*"
+options:
+  - Identifies the file
+  - "First optional part of the URL.\_These are letters \"http\", possibly \"s\", a\
+  \ colon, and two slashes"
+  - Matches domains and then the zero-level domain
+files:
+  - name: src/Main.kt
+    visible: true
+    text: |
+      // You can experiment here, it won’t be checked
+      
+      fun main(args: Array<String>) {
+        // put your code here
+      }
+    learner_created: false
+feedback_link: https://hyperskill.org/learn/step/20662#comment
+status: Solved
+record: -1
+ordering:
+  - 0
+  - 1
+  - 2

@@ -202,7 +202,7 @@ files:
   - name: src/calculator/Solution.kt
     visible: true
     learner_created: true
-feedback_link: https://hyperskill.org/projects/88/stages/489/implement#comment
+feedback_link: https://hyperskill.org/learn/step/7812#comment
 status: Solved
 feedback:
   message: Congratulations!

@@ -523,7 +523,7 @@ files:
   - name: src/calculator/Validator.kt
     visible: true
     learner_created: true
-feedback_link: https://hyperskill.org/projects/88/stages/491/implement#comment
+feedback_link: https://hyperskill.org/learn/step/7814#comment
 status: Solved
 feedback:
   message: Congratulations!
